@@ -2,10 +2,10 @@
 
 namespace Cable8mm\Cloudflared\Concerns;
 
+use Cable8mm\Cloudflared\Clients\CloudflaredCli;
 use Cable8mm\Cloudflared\Data\TunnelDetails;
 use Cable8mm\Cloudflared\Exceptions\DnsRecordAlreadyExistsException;
 use Cable8mm\Cloudflared\Support\Path;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 
 use function Laravel\Prompts\info;
@@ -14,9 +14,14 @@ use function Laravel\Prompts\warning;
 
 trait InteractsWithTunnel
 {
+    protected function cloudflared(): CloudflaredCli
+    {
+        return app(CloudflaredCli::class);
+    }
+
     protected function verifyCloudflaredFoundInPath(): void
     {
-        if (Process::run(['cloudflared', '--version'])->failed()) {
+        if (! $this->cloudflared()->installed()) {
             $this->fail('cloudflared not found in PATH.');
         }
     }
@@ -24,79 +29,57 @@ trait InteractsWithTunnel
     protected function tunnelExists(string $name): bool
     {
         return spin(
-            callback: fn () => Process::run(['cloudflared', 'tunnel', 'info', $name])->successful(),
+            callback: fn () => $this->cloudflared()->tunnelExists($name),
             message: "Verifying tunnel {$name} exists"
         );
     }
 
     protected function createTunnel(): TunnelDetails
     {
-        $name = $this->generateUniqueTunnelName();
+        $name = Path::projectName().'-'.Str::lower(Str::random(8));
 
-        $result = spin(
-            callback: fn () => Process::run(['cloudflared', 'tunnel', 'create', $name]),
+        $tunnel = spin(
+            callback: fn () => $this->cloudflared()->createTunnel($name),
             message: "Creating tunnel: {$name}"
         );
 
-        $result->throw();
-
-        if (! preg_match('/Created tunnel .+ with id ([a-f0-9\-]+)/', $result->output(), $tunnelMatch)) {
-            $this->fail('Unable to extract tunnel ID from cloudflared output.');
-        }
-
         info(" ✔ Created tunnel: {$name}");
 
-        return new TunnelDetails(id: $tunnelMatch[1], name: $name);
+        return $tunnel;
     }
 
     protected function deleteTunnel(string $name): void
     {
-        $result = spin(
-            callback: fn () => Process::run(['cloudflared', 'tunnel', 'delete', $name]),
+        $deleted = spin(
+            callback: fn () => $this->cloudflared()->deleteTunnel($name),
             message: "Deleting tunnel: {$name}"
         );
 
-        if ($result->seeInErrorOutput("there should only be 1 non-deleted Tunnel named {$name}")) {
-            warning(" ⚠ Can't delete tunnel {$name} because it doesn't exist.");
-
-            return;
-        }
-
-        $result->throw();
-
-        info(" ✔ Deleted tunnel: {$name}");
+        $deleted
+            ? info(" ✔ Deleted tunnel: {$name}")
+            : warning(" ⚠ Can't delete tunnel {$name} because it doesn't exist.");
     }
 
-    protected function createDnsRecord(string $id, string $hostname): void
+    /**
+     * @throws DnsRecordAlreadyExistsException
+     */
+    protected function createDnsRecord(string $tunnelId, string $hostname): void
     {
-        $result = spin(
-            callback: fn () => Process::run(['cloudflared', 'tunnel', 'route', 'dns', $id, $hostname]),
+        spin(
+            callback: fn () => $this->cloudflared()->routeDns($tunnelId, $hostname),
             message: "Creating DNS record: {$hostname}"
         );
-
-        if ($result->seeInErrorOutput('Failed to add route: code: 1003')) {
-            throw new DnsRecordAlreadyExistsException($hostname);
-        }
-
-        $result->throw();
 
         info(" ✔ Created DNS record: {$hostname}");
     }
 
-    protected function overwriteDnsRecord(string $id, string $hostname): void
+    protected function overwriteDnsRecord(string $tunnelId, string $hostname): void
     {
-        $result = spin(
-            callback: fn () => Process::run(['cloudflared', 'tunnel', 'route', 'dns', '--overwrite-dns', $id, $hostname]),
+        spin(
+            callback: fn () => $this->cloudflared()->routeDns($tunnelId, $hostname, overwrite: true),
             message: "Overwriting DNS record: {$hostname}"
         );
 
-        $result->throw();
-
         info(" ✔ Overwrote DNS record: {$hostname}");
-    }
-
-    protected function generateUniqueTunnelName(): string
-    {
-        return Path::projectName().'-'.Str::lower(Str::random(8));
     }
 }

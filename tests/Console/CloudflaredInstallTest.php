@@ -1,6 +1,7 @@
 <?php
 
 use Cable8mm\Cloudflared\Clients\CloudflareClient;
+use Cable8mm\Cloudflared\Console\InstallAction;
 use Cable8mm\Cloudflared\Data\Certificate;
 use Cable8mm\Cloudflared\Data\ProjectConfig;
 use Illuminate\Http\Client\Request;
@@ -61,9 +62,9 @@ it('deletes records created for an abandoned hostname when choosing a different 
     $this->artisan('cloudflared:install')
         ->expectsQuestion('What subdomain do you want to use for this tunnel?', 'myapp')
         ->expectsConfirmation('Do you want to create a DNS record for Vite?', 'yes')
-        ->expectsChoice('How do you want to proceed?', 'Choose a different hostname', [
-            'Overwrite and point to your tunnel',
-            'Choose a different hostname',
+        ->expectsChoice('How do you want to proceed?', 'rename', [
+            'overwrite' => 'Overwrite and point to your tunnel',
+            'rename' => 'Choose a different hostname',
         ])
         ->expectsQuestion('What subdomain do you want to use for this tunnel?', 'other')
         ->assertSuccessful();
@@ -88,15 +89,54 @@ it('exits successfully when keeping the existing configuration', function () {
     fakeCloudflaredProcesses();
 
     $this->artisan('cloudflared:install')
-        ->expectsChoice('What would you like to do?', 'Keep existing configuration', [
-            'Keep existing configuration',
-            'Change subdomain',
-            'Create Vite DNS record',
-            'Repair DNS records',
-            'Delete and recreate tunnel',
-        ])
+        ->expectsChoice('What would you like to do?', InstallAction::Keep->value, InstallAction::options(viteEnabled: false))
         ->expectsOutputToContain('Cancelled.')
         ->assertSuccessful();
 
     Process::assertDidntRun(fn ($process) => in_array('route', (array) $process->command));
+});
+
+it('changes the subdomain of an existing installation', function () {
+    installCloudflared();
+    fakeCloudflaredProcesses();
+
+    $this->artisan('cloudflared:install')
+        ->expectsChoice('What would you like to do?', InstallAction::ChangeSubdomain->value, InstallAction::options(viteEnabled: false))
+        ->expectsQuestion('What subdomain do you want to use for this tunnel?', 'renamed')
+        ->assertSuccessful();
+
+    Http::assertSent(fn (Request $request) => $request->method() === 'DELETE');
+    Process::assertRan(fn ($process) => $process->command === ['herd', 'unlink', 'myapp.example.com']);
+    Process::assertRan(fn ($process) => $process->command === ['cloudflared', 'tunnel', 'route', 'dns', 'fake-tunnel-id', 'renamed.example.com']);
+    Process::assertRan(fn ($process) => $process->command === ['herd', 'link', 'renamed.example.com']);
+
+    expect(ProjectConfig::load()->hostname)->toBe('renamed.example.com');
+});
+
+it('repairs dns records by overwriting them', function () {
+    installCloudflared();
+    fakeCloudflaredProcesses();
+
+    $this->artisan('cloudflared:install')
+        ->expectsChoice('What would you like to do?', InstallAction::RepairDnsRecords->value, InstallAction::options(viteEnabled: false))
+        ->expectsConfirmation('Are you sure you want to update the DNS record for myapp.example.com to point to your tunnel?', 'yes')
+        ->assertSuccessful();
+
+    Process::assertRan(fn ($process) => $process->command === ['cloudflared', 'tunnel', 'route', 'dns', '--overwrite-dns', 'fake-tunnel-id', 'myapp.example.com']);
+});
+
+it('creates a new tunnel when the configured one no longer exists', function () {
+    installCloudflared();
+    Process::fake([
+        "*'tunnel' 'info'*" => Process::result(exitCode: 1),
+        "*'tunnel' 'create'*" => Process::result(output: 'Created tunnel myapp-abc with id 6f1c-42ab'),
+        '*' => Process::result(),
+    ]);
+
+    $this->artisan('cloudflared:install')
+        ->expectsQuestion('What subdomain do you want to use for this tunnel?', 'myapp')
+        ->expectsConfirmation('Do you want to create a DNS record for Vite?', 'no')
+        ->assertSuccessful();
+
+    expect(ProjectConfig::load()->id)->toBe('6f1c-42ab');
 });

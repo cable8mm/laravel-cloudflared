@@ -2,29 +2,34 @@
 
 namespace Cable8mm\Cloudflared\Concerns;
 
-use Illuminate\Support\Facades\Process;
+use Cable8mm\Cloudflared\Clients\HerdCli;
 
 use function Laravel\Prompts\info;
 
 trait InteractsWithHerd
 {
+    protected function herd(): HerdCli
+    {
+        return app(HerdCli::class);
+    }
+
     protected function verifyHerdFoundInPath(): void
     {
-        if (Process::run(['herd', '--version'])->failed()) {
+        if (! $this->herd()->installed()) {
             $this->fail('Laravel Herd not found in PATH.');
         }
     }
 
     protected function createHerdLink(string $hostname): void
     {
-        Process::run(['herd', 'link', $hostname])->throw();
+        $this->herd()->link($hostname);
 
         info(" ✔ Created Herd link: {$hostname}");
     }
 
     protected function deleteHerdLink(string $hostname): void
     {
-        Process::run(['herd', 'unlink', $hostname])->throw();
+        $this->herd()->unlink($hostname);
 
         info(" ✔ Deleted Herd link: {$hostname}");
     }

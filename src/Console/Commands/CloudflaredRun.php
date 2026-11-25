@@ -9,7 +9,6 @@ use Cable8mm\Cloudflared\Data\TunnelConfig;
 use Cable8mm\Cloudflared\Exceptions\ProjectNotInstalledException;
 use Cable8mm\Cloudflared\Facades\Cloudflared;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Process;
 
 use function Laravel\Prompts\info;
 
@@ -21,7 +20,7 @@ class CloudflaredRun extends Command
 
     protected $description = 'Run the Cloudflare Tunnel of this project.';
 
-    public function handle(): void
+    public function handle(): int
     {
         $this->verifyCloudflaredFoundInPath();
         $this->verifyHerdFoundInPath();
@@ -34,74 +33,30 @@ class CloudflaredRun extends Command
 
         $this->saveTunnelConfig($tunnelConfig);
         $this->createHerdLink($tunnelConfig->hostname());
-        $this->runCloudflared($tunnelConfig);
+
+        return $this->runTunnel($tunnelConfig);
     }
 
-    // TODO: Only show process output if it was requested via a --debug or --logLevel or something like that.
-    // Else, only show errors.
-
-    // TODO: Look through this and see if there is anything to optimize.
-    protected function runCloudflared(TunnelConfig $tunnelConfig): void
+    protected function runTunnel(TunnelConfig $tunnelConfig): int
     {
+        $process = $this->cloudflared()->run($tunnelConfig->path());
+
         info(' ✔ Started tunnel.');
 
-        // Set up signal handlers before starting the process
-        pcntl_async_signals(true);
-
-        $process = Process::forever()
-            ->tty()
-            ->start(['cloudflared', 'tunnel', '--config', $tunnelConfig->path(), 'run']);
-
-        // Track if we're already shutting down to prevent duplicate signal handling
-        $shuttingDown = false;
-
-        // Handle multiple termination signals
-        $signalHandler = function ($signal) use ($process, &$shuttingDown, $tunnelConfig) {
-            if ($shuttingDown) {
-                return;
-            }
-
-            $shuttingDown = true;
-
+        // Keep PHP alive on Ctrl+C and friends so the tunnel config is always
+        // cleaned up: forward the signal and let wait() return once it exits.
+        $this->trap([SIGINT, SIGTERM, SIGHUP], function () use ($process) {
             if ($process->running()) {
                 $process->signal(SIGTERM);
-                $process->wait();
             }
-
-            $this->cleanupCloudflaredProcess($tunnelConfig);
-            exit(0);
-        };
-
-        pcntl_signal(SIGINT, $signalHandler);  // Ctrl+C
-        pcntl_signal(SIGTERM, $signalHandler); // Termination signal
-        pcntl_signal(SIGHUP, $signalHandler);  // Hangup signal
+        });
 
         try {
-            $process->wait();
+            return $process->wait()->exitCode() ?? self::SUCCESS;
+        } finally {
+            info(' ✔ Stopped tunnel.');
 
-            // If process exited normally or was terminated by our signal handler, clean up
-            if (! $shuttingDown) {
-                $this->cleanupCloudflaredProcess($tunnelConfig);
-            }
-        } catch (\Exception $e) {
-            // Ensure process is terminated on any failure
-            if ($process->running() && ! $shuttingDown) {
-                $process->signal(SIGTERM);
-                $process->wait();
-            }
-
-            if (! $shuttingDown) {
-                $this->cleanupCloudflaredProcess($tunnelConfig);
-            }
-
-            throw $e;
+            $this->deleteTunnelConfig($tunnelConfig);
         }
-    }
-
-    protected function cleanupCloudflaredProcess(TunnelConfig $tunnelConfig): void
-    {
-        info(' ✔ Stopped tunnel.');
-
-        $this->deleteTunnelConfig($tunnelConfig);
     }
 }

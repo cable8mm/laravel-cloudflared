@@ -6,6 +6,7 @@ use Cable8mm\Cloudflared\Concerns\InteractsWithCloudflareApi;
 use Cable8mm\Cloudflared\Concerns\InteractsWithHerd;
 use Cable8mm\Cloudflared\Concerns\InteractsWithTunnel;
 use Cable8mm\Cloudflared\Concerns\ManagesProject;
+use Cable8mm\Cloudflared\Console\InstallAction;
 use Cable8mm\Cloudflared\Data\ProjectConfig;
 use Cable8mm\Cloudflared\Data\TunnelConfig;
 use Cable8mm\Cloudflared\Exceptions\CommandCancelledException;
@@ -84,24 +85,18 @@ class CloudflaredInstall extends Command
 
         warning(" ⚠ Tunnel {$tunnelConfig->name()} exists.");
 
-        $selection = select(
+        $action = InstallAction::from(select(
             label: 'What would you like to do?',
-            options: [
-                'Keep existing configuration',
-                'Change subdomain',
-                ...! $tunnelConfig->projectConfig->vite ? ['Create Vite DNS record'] : [],
-                'Repair DNS records',
-                'Delete and recreate tunnel',
-            ],
-            default: 'Keep existing configuration'
-        );
+            options: InstallAction::options(viteEnabled: $tunnelConfig->projectConfig->vite),
+            default: InstallAction::Keep->value,
+        ));
 
-        match ($selection) {
-            'Keep existing configuration' => throw new CommandCancelledException,
-            'Change subdomain' => $this->changeSubdomain($tunnelConfig->projectConfig),
-            'Repair DNS records' => $this->repairDnsRecords($tunnelConfig->projectConfig),
-            'Delete and recreate tunnel' => $this->recreateTunnel($tunnelConfig),
-            'Create Vite DNS record' => $this->createViteDnsRecord($tunnelConfig->projectConfig),
+        match ($action) {
+            InstallAction::Keep => throw new CommandCancelledException,
+            InstallAction::ChangeSubdomain => $this->changeSubdomain($tunnelConfig->projectConfig),
+            InstallAction::CreateViteRecord => $this->createViteDnsRecord($tunnelConfig->projectConfig),
+            InstallAction::RepairDnsRecords => $this->repairDnsRecords($tunnelConfig->projectConfig),
+            InstallAction::RecreateTunnel => $this->recreateTunnel($tunnelConfig),
         };
     }
 
@@ -229,12 +224,12 @@ class CloudflaredInstall extends Command
         $selection = select(
             label: 'How do you want to proceed?',
             options: [
-                'Overwrite and point to your tunnel',
-                'Choose a different hostname',
+                'overwrite' => 'Overwrite and point to your tunnel',
+                'rename' => 'Choose a different hostname',
             ]
         );
 
-        return $selection === 'Overwrite and point to your tunnel';
+        return $selection === 'overwrite';
     }
 
     protected function askForSubdomain(): string
