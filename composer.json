@@ -1,16 +1,24 @@
 {
-    "name": "aerni/cloudflared",
+    "name": "cable8mm/cloudflared",
     "description": "A Laravel package to create and manage Cloudflare Tunnels for local development",
-    "homepage": "https://github.com/aerni/laravel-cloudflared",
+    "homepage": "https://github.com/cable8mm/laravel-cloudflared",
     "license": "MIT",
     "authors": [
         {
             "name": "Michael Aerni",
             "email": "hello@michaelaerni.ch",
             "homepage": "https://michaelaerni.ch",
-            "role": "Developer"
+            "role": "Original Author"
+        },
+        {
+            "name": "Samgu Lee",
+            "homepage": "https://github.com/cable8mm",
+            "role": "Maintainer"
         }
     ],
+    "conflict": {
+        "aerni/cloudflared": "*"
+    },
     "require": {
         "php": "^8.3",
         "illuminate/http": "^12.0 || ^13.0",
@@ -23,7 +31,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Aerni\\Cloudflared\\": "src"
+            "Cable8mm\\Cloudflared\\": "src"
         }
     },
     "autoload-dev": {
@@ -43,7 +51,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Aerni\\Cloudflared\\CloudflaredServiceProvider"
+                "Cable8mm\\Cloudflared\\CloudflaredServiceProvider"
             ]
         }
     },

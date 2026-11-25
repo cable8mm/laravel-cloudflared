@@ -1,6 +1,6 @@
 <?php
 
-namespace Aerni\Cloudflared\Concerns;
+namespace Cable8mm\Cloudflared\Concerns;
 
 use Illuminate\Support\Str;
 

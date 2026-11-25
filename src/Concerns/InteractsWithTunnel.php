@@ -1,9 +1,9 @@
 <?php
 
-namespace Aerni\Cloudflared\Concerns;
+namespace Cable8mm\Cloudflared\Concerns;
 
-use Aerni\Cloudflared\Data\TunnelDetails;
-use Aerni\Cloudflared\Exceptions\DnsRecordAlreadyExistsException;
+use Cable8mm\Cloudflared\Data\TunnelDetails;
+use Cable8mm\Cloudflared\Exceptions\DnsRecordAlreadyExistsException;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 

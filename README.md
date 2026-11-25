@@ -1,5 +1,7 @@
 # Cloudflared for Laravel
 
+> This is a maintained fork of [aerni/laravel-cloudflared](https://github.com/aerni/laravel-cloudflared), published as `cable8mm/cloudflared`.
+
 A simple package to create and manage Cloudflare Tunnels for your Laravel projects. Cloudflare Tunnels give you instant public access to your local development environment, similar to Expose or ngrok, but powered by Cloudflare. Perfect for testing webhooks and sharing work-in-progress.
 
 Pair it with [Cloudflared for Vite](https://github.com/aerni/vite-plugin-laravel-cloudflared) to get seamless tunneled access to both your Laravel app and Vite's dev server, making it effortless to debug your frontend on real devices like your iPhone.
@@ -15,7 +17,7 @@ Pair it with [Cloudflared for Vite](https://github.com/aerni/vite-plugin-laravel
 Install the package using Composer:
 
 ```bash
-composer require aerni/cloudflared
+composer require cable8mm/cloudflared
 ```
 
 Keep `APP_URL` set to your local Herd URL (e.g. `http://myapp.test`). Do not set it to the public tunnel hostname. That would make cloudflared forward traffic to itself. While the tunnel is running, the package automatically rewrites URL generation to the public Cloudflare URL in web requests, queue workers, and scheduled commands. You never need to edit `.env` whether the tunnel is active or not.
@@ -62,14 +64,23 @@ The URL rewrite is captured once when the worker boots. Restart long-running wor
 
 Make sure your config isn't cached while the tunnel is up. The rewrite runs during bootstrap, so the tunnel URL would get serialized into the cached config and pin there. Clear your config cache if this happens.
 
+## Migrating from `aerni/cloudflared`
+
+```bash
+composer remove aerni/cloudflared
+composer require cable8mm/cloudflared
+```
+
+The `.cloudflared.yaml` file and the artisan commands stay the same. If you referenced classes directly (for example the `Cloudflared` facade), change the namespace from `Aerni\Cloudflared` to `Cable8mm\Cloudflared`.
+
 ## License
 
-This package is open-sourced software licensed under the [MIT license](LICENSE.md).
+This package is open-sourced software licensed under the [MIT license](LICENSE).
 
 ## Credits
 
-Developed by [Michael Aerni](https://michaelaerni.ch)
+Originally developed by [Michael Aerni](https://michaelaerni.ch). Maintained by [Samgu Lee](https://github.com/cable8mm).
 
 ## Support
 
-For issues and questions, please use the [GitHub Issues](https://github.com/aerni/laravel-cloudflared/issues) page.
+For issues and questions, please use the [GitHub Issues](https://github.com/cable8mm/laravel-cloudflared/issues) page.

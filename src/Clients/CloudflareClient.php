@@ -1,9 +1,9 @@
 <?php
 
-namespace Aerni\Cloudflared\Clients;
+namespace Cable8mm\Cloudflared\Clients;
 
-use Aerni\Cloudflared\Data\Certificate;
-use Aerni\Cloudflared\Exceptions\NotATunnelDnsRecordException;
+use Cable8mm\Cloudflared\Data\Certificate;
+use Cable8mm\Cloudflared\Exceptions\NotATunnelDnsRecordException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 

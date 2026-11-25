@@ -1,8 +1,8 @@
 <?php
 
-use Aerni\Cloudflared\Clients\CloudflareClient;
-use Aerni\Cloudflared\Data\Certificate;
-use Aerni\Cloudflared\Exceptions\NotATunnelDnsRecordException;
+use Cable8mm\Cloudflared\Clients\CloudflareClient;
+use Cable8mm\Cloudflared\Data\Certificate;
+use Cable8mm\Cloudflared\Exceptions\NotATunnelDnsRecordException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 
