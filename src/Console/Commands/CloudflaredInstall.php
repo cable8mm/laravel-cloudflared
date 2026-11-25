@@ -103,17 +103,16 @@ class CloudflaredInstall extends Command
         exit(0);
     }
 
-    protected function changeSubdomain(ProjectConfig $projectConfig): void
+    protected function changeSubdomain(ProjectConfig $projectConfig, bool $enableVite = false): void
     {
         $oldHostname = $projectConfig->hostname;
-        $oldViteHostname = $projectConfig->viteHostname();
+        $oldHostnames = $projectConfig->hostnames();
 
         $projectConfig->hostname = $this->askForSubdomain();
+        $projectConfig->vite = $projectConfig->vite || $enableVite;
 
-        $this->deleteDnsRecord($oldHostname);
-
-        if ($projectConfig->vite) {
-            $this->deleteDnsRecord($oldViteHostname);
+        foreach ($oldHostnames as $hostname) {
+            $this->deleteDnsRecord($hostname);
         }
 
         $this->deleteHerdLink($oldHostname);
@@ -163,49 +162,73 @@ class CloudflaredInstall extends Command
 
     protected function createViteDnsRecord(ProjectConfig $projectConfig): void
     {
-        $projectConfig->vite = true;
+        $viteHostname = "vite-{$projectConfig->hostname}";
 
         if (! confirm(
             label: 'Are you sure you want to create a DNS record for Vite?',
-            hint: "Creates DNS record: {$projectConfig->viteHostname()}"
+            hint: "Creates DNS record: {$viteHostname}"
         )) {
             error(' ⚠ Cancelled.');
             exit(0);
         }
 
         try {
-            $this->createDnsRecord($projectConfig->id, $projectConfig->viteHostname());
+            $this->createDnsRecord($projectConfig->id, $viteHostname);
         } catch (DnsRecordAlreadyExistsException) {
-            $this->handleExistingDnsRecords($projectConfig, [$projectConfig->viteHostname()]);
+            if (! $this->shouldOverwriteExistingDnsRecords([$viteHostname])) {
+                // The old hostname's records belong to this tunnel, so changing
+                // the subdomain replaces them along with the Herd link.
+                $this->changeSubdomain($projectConfig, enableVite: true);
+
+                return;
+            }
+
+            $this->overwriteDnsRecord($projectConfig->id, $viteHostname);
         }
 
+        $projectConfig->vite = true;
         $projectConfig->save();
     }
 
     protected function createDnsRecords(ProjectConfig $projectConfig): void
     {
-        $hostnames = [$projectConfig->hostname];
-
-        if ($projectConfig->vite) {
-            $hostnames[] = $projectConfig->viteHostname();
-        }
-
+        $createdRecords = [];
         $existingRecords = [];
 
-        foreach ($hostnames as $hostname) {
+        foreach ($projectConfig->hostnames() as $hostname) {
             try {
                 $this->createDnsRecord($projectConfig->id, $hostname);
-            } catch (DnsRecordAlreadyExistsException $e) {
+                $createdRecords[] = $hostname;
+            } catch (DnsRecordAlreadyExistsException) {
                 $existingRecords[] = $hostname;
             }
         }
 
-        if (! empty($existingRecords)) {
-            $this->handleExistingDnsRecords($projectConfig, $existingRecords);
+        if (empty($existingRecords)) {
+            return;
         }
+
+        if ($this->shouldOverwriteExistingDnsRecords($existingRecords)) {
+            foreach ($existingRecords as $hostname) {
+                $this->overwriteDnsRecord($projectConfig->id, $hostname);
+            }
+
+            return;
+        }
+
+        // Records created for the abandoned hostname would otherwise be left behind.
+        foreach ($createdRecords as $hostname) {
+            $this->deleteDnsRecord($hostname);
+        }
+
+        $projectConfig->hostname = $this->askForSubdomain();
+        $this->createDnsRecords($projectConfig);
     }
 
-    protected function handleExistingDnsRecords(ProjectConfig $projectConfig, array $existingRecords): void
+    /**
+     * @param  list<string>  $existingRecords
+     */
+    protected function shouldOverwriteExistingDnsRecords(array $existingRecords): bool
     {
         warning(' ⚠ '.trans_choice(
             '{1} DNS record :records already exists.|[2,*] DNS records :records already exist.',
@@ -221,16 +244,7 @@ class CloudflaredInstall extends Command
             ]
         );
 
-        if ($selection === 'Overwrite and point to your tunnel') {
-            foreach ($existingRecords as $hostname) {
-                $this->overwriteDnsRecord($projectConfig->id, $hostname);
-            }
-
-            return;
-        }
-
-        $projectConfig->hostname = $this->askForSubdomain();
-        $this->createDnsRecords($projectConfig);
+        return $selection === 'Overwrite and point to your tunnel';
     }
 
     protected function askForSubdomain(): string

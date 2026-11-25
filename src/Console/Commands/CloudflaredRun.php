@@ -49,7 +49,7 @@ class CloudflaredRun extends Command
 
         $process = Process::forever()
             ->tty()
-            ->start("cloudflared tunnel --config {$tunnelConfig->path()} run");
+            ->start(['cloudflared', 'tunnel', '--config', $tunnelConfig->path(), 'run']);
 
         // Track if we're already shutting down to prevent duplicate signal handling
         $shuttingDown = false;

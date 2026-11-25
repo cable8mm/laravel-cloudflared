@@ -40,6 +40,16 @@ YAML);
         return $this->vite ? "vite-{$this->hostname}" : null;
     }
 
+    /**
+     * The hostnames that need a DNS record pointing to the tunnel.
+     *
+     * @return list<string>
+     */
+    public function hostnames(): array
+    {
+        return array_values(array_filter([$this->hostname, $this->viteHostname()]));
+    }
+
     public function delete(): void
     {
         File::delete(static::path());
