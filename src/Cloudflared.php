@@ -1,9 +1,9 @@
 <?php
 
-namespace Aerni\Cloudflared;
+namespace Cable8mm\Cloudflared;
 
-use Aerni\Cloudflared\Data\ProjectConfig;
-use Aerni\Cloudflared\Data\TunnelConfig;
+use Cable8mm\Cloudflared\Data\ProjectConfig;
+use Cable8mm\Cloudflared\Data\TunnelConfig;
 
 class Cloudflared
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Aerni\Cloudflared\Exceptions;
+namespace Cable8mm\Cloudflared\Exceptions;
 
 use Exception;
 

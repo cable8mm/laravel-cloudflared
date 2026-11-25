@@ -1,12 +1,12 @@
 <?php
 
-namespace Aerni\Cloudflared\Console\Commands;
+namespace Cable8mm\Cloudflared\Console\Commands;
 
-use Aerni\Cloudflared\Concerns\InteractsWithHerd;
-use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
-use Aerni\Cloudflared\Concerns\ManagesProject;
-use Aerni\Cloudflared\Data\TunnelConfig;
-use Aerni\Cloudflared\Facades\Cloudflared;
+use Cable8mm\Cloudflared\Concerns\InteractsWithHerd;
+use Cable8mm\Cloudflared\Concerns\InteractsWithTunnel;
+use Cable8mm\Cloudflared\Concerns\ManagesProject;
+use Cable8mm\Cloudflared\Data\TunnelConfig;
+use Cable8mm\Cloudflared\Facades\Cloudflared;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
 

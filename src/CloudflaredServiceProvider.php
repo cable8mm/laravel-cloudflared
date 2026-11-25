@@ -1,13 +1,13 @@
 <?php
 
-namespace Aerni\Cloudflared;
+namespace Cable8mm\Cloudflared;
 
-use Aerni\Cloudflared\Clients\CloudflareClient;
-use Aerni\Cloudflared\Console\Commands\CloudflaredInstall;
-use Aerni\Cloudflared\Console\Commands\CloudflaredRun;
-use Aerni\Cloudflared\Console\Commands\CloudflaredUninstall;
-use Aerni\Cloudflared\Data\Certificate;
-use Aerni\Cloudflared\Facades\Cloudflared;
+use Cable8mm\Cloudflared\Clients\CloudflareClient;
+use Cable8mm\Cloudflared\Console\Commands\CloudflaredInstall;
+use Cable8mm\Cloudflared\Console\Commands\CloudflaredRun;
+use Cable8mm\Cloudflared\Console\Commands\CloudflaredUninstall;
+use Cable8mm\Cloudflared\Data\Certificate;
+use Cable8mm\Cloudflared\Facades\Cloudflared;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\URL;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Aerni\Cloudflared\Data;
+namespace Cable8mm\Cloudflared\Data;
 
 class TunnelDetails
 {

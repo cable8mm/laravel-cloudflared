@@ -1,6 +1,6 @@
 <?php
 
-use Aerni\Cloudflared\CloudflaredServiceProvider;
+use Cable8mm\Cloudflared\CloudflaredServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;

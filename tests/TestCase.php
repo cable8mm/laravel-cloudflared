@@ -2,7 +2,7 @@
 
 namespace Tests;
 
-use Aerni\Cloudflared\CloudflaredServiceProvider;
+use Cable8mm\Cloudflared\CloudflaredServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase

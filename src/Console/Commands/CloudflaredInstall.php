@@ -1,15 +1,15 @@
 <?php
 
-namespace Aerni\Cloudflared\Console\Commands;
+namespace Cable8mm\Cloudflared\Console\Commands;
 
-use Aerni\Cloudflared\Concerns\InteractsWithCloudflareApi;
-use Aerni\Cloudflared\Concerns\InteractsWithHerd;
-use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
-use Aerni\Cloudflared\Concerns\ManagesProject;
-use Aerni\Cloudflared\Data\ProjectConfig;
-use Aerni\Cloudflared\Data\TunnelConfig;
-use Aerni\Cloudflared\Exceptions\DnsRecordAlreadyExistsException;
-use Aerni\Cloudflared\Facades\Cloudflared;
+use Cable8mm\Cloudflared\Concerns\InteractsWithCloudflareApi;
+use Cable8mm\Cloudflared\Concerns\InteractsWithHerd;
+use Cable8mm\Cloudflared\Concerns\InteractsWithTunnel;
+use Cable8mm\Cloudflared\Concerns\ManagesProject;
+use Cable8mm\Cloudflared\Data\ProjectConfig;
+use Cable8mm\Cloudflared\Data\TunnelConfig;
+use Cable8mm\Cloudflared\Exceptions\DnsRecordAlreadyExistsException;
+use Cable8mm\Cloudflared\Facades\Cloudflared;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 

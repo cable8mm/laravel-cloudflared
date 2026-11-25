@@ -1,8 +1,8 @@
 <?php
 
-namespace Aerni\Cloudflared\Data;
+namespace Cable8mm\Cloudflared\Data;
 
-use Aerni\Cloudflared\Concerns\AssemblesPath;
+use Cable8mm\Cloudflared\Concerns\AssemblesPath;
 use Illuminate\Support\Facades\File;
 
 class TunnelConfig
