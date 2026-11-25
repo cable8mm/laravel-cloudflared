@@ -28,9 +28,4 @@ trait InteractsWithHerd
 
         info(" ✔ Deleted Herd link: {$hostname}");
     }
-
-    protected function herdSiteName(): string
-    {
-        return basename(base_path());
-    }
 }

@@ -6,6 +6,7 @@ use Cable8mm\Cloudflared\Concerns\InteractsWithHerd;
 use Cable8mm\Cloudflared\Concerns\InteractsWithTunnel;
 use Cable8mm\Cloudflared\Concerns\ManagesProject;
 use Cable8mm\Cloudflared\Data\TunnelConfig;
+use Cable8mm\Cloudflared\Exceptions\ProjectNotInstalledException;
 use Cable8mm\Cloudflared\Facades\Cloudflared;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
@@ -26,7 +27,7 @@ class CloudflaredRun extends Command
         $this->verifyHerdFoundInPath();
 
         if (! Cloudflared::isInstalled()) {
-            $this->fail('No project configuration found. Run "php artisan cloudflared:install" first.');
+            $this->fail((new ProjectNotInstalledException)->getMessage());
         }
 
         $tunnelConfig = Cloudflared::tunnelConfig();

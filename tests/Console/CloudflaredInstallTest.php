@@ -82,3 +82,21 @@ it('deletes records created for an abandoned hostname when choosing a different 
         ->hostname->toBe('other.example.com')
         ->vite->toBeTrue();
 });
+
+it('exits successfully when keeping the existing configuration', function () {
+    installCloudflared();
+    fakeCloudflaredProcesses();
+
+    $this->artisan('cloudflared:install')
+        ->expectsChoice('What would you like to do?', 'Keep existing configuration', [
+            'Keep existing configuration',
+            'Change subdomain',
+            'Create Vite DNS record',
+            'Repair DNS records',
+            'Delete and recreate tunnel',
+        ])
+        ->expectsOutputToContain('Cancelled.')
+        ->assertSuccessful();
+
+    Process::assertDidntRun(fn ($process) => in_array('route', (array) $process->command));
+});

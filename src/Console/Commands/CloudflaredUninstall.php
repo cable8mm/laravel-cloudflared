@@ -6,6 +6,7 @@ use Cable8mm\Cloudflared\Concerns\InteractsWithCloudflareApi;
 use Cable8mm\Cloudflared\Concerns\InteractsWithHerd;
 use Cable8mm\Cloudflared\Concerns\InteractsWithTunnel;
 use Cable8mm\Cloudflared\Concerns\ManagesProject;
+use Cable8mm\Cloudflared\Exceptions\ProjectNotInstalledException;
 use Cable8mm\Cloudflared\Facades\Cloudflared;
 use Illuminate\Console\Command;
 
@@ -20,13 +21,13 @@ class CloudflaredUninstall extends Command
 
     protected $description = 'Delete the Cloudflare Tunnel of this project.';
 
-    public function handle()
+    public function handle(): int
     {
         $this->verifyCloudflaredFoundInPath();
         $this->verifyHerdFoundInPath();
 
         if (! Cloudflared::isInstalled()) {
-            $this->fail('No project configuration found. Run "php artisan cloudflared:install" first.');
+            $this->fail((new ProjectNotInstalledException)->getMessage());
         }
 
         $tunnelConfig = Cloudflared::tunnelConfig();
@@ -47,5 +48,7 @@ class CloudflaredUninstall extends Command
         $this->deleteHerdLink($tunnelConfig->hostname());
         $this->deleteDnsRecords($tunnelConfig);
         $this->deleteProject($tunnelConfig);
+
+        return self::SUCCESS;
     }
 }

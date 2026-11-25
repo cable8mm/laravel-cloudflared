@@ -48,10 +48,8 @@ trait InteractsWithCloudflareApi
 
     protected function deleteDnsRecords(TunnelConfig $tunnelConfig): void
     {
-        $this->deleteDnsRecord($tunnelConfig->hostname());
-
-        if ($tunnelConfig->projectConfig->vite) {
-            $this->deleteDnsRecord($tunnelConfig->viteHostname());
+        foreach ($tunnelConfig->projectConfig->hostnames() as $hostname) {
+            $this->deleteDnsRecord($hostname);
         }
     }
 }
