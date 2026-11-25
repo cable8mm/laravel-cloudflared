@@ -27,7 +27,7 @@ class CloudflaredUninstall extends Command
         $this->verifyHerdFoundInPath();
 
         if (! Cloudflared::isInstalled()) {
-            $this->fail(new ProjectNotInstalledException);
+            $this->fail((new ProjectNotInstalledException)->getMessage());
         }
 
         $tunnelConfig = Cloudflared::tunnelConfig();
