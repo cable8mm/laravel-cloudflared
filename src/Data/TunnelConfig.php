@@ -2,29 +2,24 @@
 
 namespace Cable8mm\Cloudflared\Data;
 
-use Cable8mm\Cloudflared\Concerns\AssemblesPath;
+use Cable8mm\Cloudflared\Support\Path;
 use Illuminate\Support\Facades\File;
+use Symfony\Component\Yaml\Yaml;
 
 class TunnelConfig
 {
-    use AssemblesPath;
-
-    public function __construct(public readonly ProjectConfig $projectConfig)
-    {
-        //
-    }
+    public function __construct(public readonly ProjectConfig $projectConfig) {}
 
     public function save(): void
     {
-        File::put($this->path(), <<<YAML
-tunnel: {$this->id()}
-credentials-file: {$this->credentialsPath()}
-
-ingress:
-  - hostname: {$this->hostname()}
-    service: {$this->service()}
-  - service: http_status:404
-YAML);
+        File::put($this->path(), Yaml::dump([
+            'tunnel' => $this->id(),
+            'credentials-file' => $this->credentialsPath(),
+            'ingress' => [
+                ['hostname' => $this->hostname(), 'service' => $this->service()],
+                ['service' => 'http_status:404'],
+            ],
+        ], inline: 3, indent: 2, flags: Yaml::DUMP_COMPACT_NESTED_MAPPING));
     }
 
     public function delete(): void
@@ -64,11 +59,11 @@ YAML);
 
     public function path(): string
     {
-        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->id()}.yaml");
+        return Path::cloudflared("{$this->id()}.yaml");
     }
 
     public function credentialsPath(): string
     {
-        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->id()}.json");
+        return Path::cloudflared("{$this->id()}.json");
     }
 }

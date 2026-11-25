@@ -4,6 +4,7 @@ namespace Cable8mm\Cloudflared\Concerns;
 
 use Cable8mm\Cloudflared\Data\TunnelDetails;
 use Cable8mm\Cloudflared\Exceptions\DnsRecordAlreadyExistsException;
+use Cable8mm\Cloudflared\Support\Path;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 
@@ -96,9 +97,6 @@ trait InteractsWithTunnel
 
     protected function generateUniqueTunnelName(): string
     {
-        $projectName = basename(base_path());
-        $randomId = Str::lower(Str::random(8));
-
-        return "{$projectName}-{$randomId}";
+        return Path::projectName().'-'.Str::lower(Str::random(8));
     }
 }

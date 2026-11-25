@@ -2,6 +2,7 @@
 
 namespace Cable8mm\Cloudflared\Data;
 
+use Cable8mm\Cloudflared\Support\Path;
 use Illuminate\Support\Facades\File;
 
 class Certificate
@@ -51,7 +52,7 @@ class Certificate
 
     public static function path(): string
     {
-        return getenv('HOME').'/.cloudflared/cert.pem';
+        return Path::cloudflared('cert.pem');
     }
 
     public static function exists(): bool

@@ -8,8 +8,10 @@ use Cable8mm\Cloudflared\Concerns\InteractsWithTunnel;
 use Cable8mm\Cloudflared\Concerns\ManagesProject;
 use Cable8mm\Cloudflared\Data\ProjectConfig;
 use Cable8mm\Cloudflared\Data\TunnelConfig;
+use Cable8mm\Cloudflared\Exceptions\CommandCancelledException;
 use Cable8mm\Cloudflared\Exceptions\DnsRecordAlreadyExistsException;
 use Cable8mm\Cloudflared\Facades\Cloudflared;
+use Cable8mm\Cloudflared\Support\Path;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 
@@ -27,14 +29,20 @@ class CloudflaredInstall extends Command
 
     protected $description = 'Create a Cloudflare Tunnel for this project.';
 
-    public function handle()
+    public function handle(): int
     {
         $this->verifyCloudflaredFoundInPath();
         $this->verifyHerdFoundInPath();
 
-        Cloudflared::isInstalled()
-            ? $this->handleExistingInstallation()
-            : $this->handleNewInstallation();
+        try {
+            Cloudflared::isInstalled()
+                ? $this->handleExistingInstallation()
+                : $this->handleNewInstallation();
+        } catch (CommandCancelledException) {
+            error(' ⚠ Cancelled.');
+        }
+
+        return self::SUCCESS;
     }
 
     protected function handleNewInstallation(): void
@@ -43,7 +51,7 @@ class CloudflaredInstall extends Command
 
         $vite = confirm(
             label: 'Do you want to create a DNS record for Vite?',
-            hint: "Required for vite-plugin-laravel-cloudflared. Creates DNS record: vite-{$hostname}",
+            hint: 'Required for vite-plugin-laravel-cloudflared. Creates DNS record: '.ProjectConfig::viteHostnameFor($hostname),
         );
 
         $tunnelDetails = $this->createTunnel();
@@ -89,18 +97,12 @@ class CloudflaredInstall extends Command
         );
 
         match ($selection) {
-            'Keep existing configuration' => $this->keepExisting(),
+            'Keep existing configuration' => throw new CommandCancelledException,
             'Change subdomain' => $this->changeSubdomain($tunnelConfig->projectConfig),
             'Repair DNS records' => $this->repairDnsRecords($tunnelConfig->projectConfig),
             'Delete and recreate tunnel' => $this->recreateTunnel($tunnelConfig),
             'Create Vite DNS record' => $this->createViteDnsRecord($tunnelConfig->projectConfig),
         };
-    }
-
-    protected function keepExisting(): void
-    {
-        error(' ⚠ Cancelled.');
-        exit(0);
     }
 
     protected function changeSubdomain(ProjectConfig $projectConfig, bool $enableVite = false): void
@@ -121,7 +123,7 @@ class CloudflaredInstall extends Command
 
         $this->createHerdLink($projectConfig->hostname);
 
-        $projectConfig->save();
+        $this->saveProjectConfig($projectConfig);
     }
 
     protected function repairDnsRecords(ProjectConfig $projectConfig): void
@@ -134,26 +136,17 @@ class CloudflaredInstall extends Command
             ? 'This will overwrite the existing DNS records.'
             : 'This will overwrite the existing DNS record.';
 
-        if (! confirm(label: $message, hint: $hint)) {
-            error(' ⚠ Cancelled.');
-            exit(0);
-        }
+        $this->confirmOrCancel(label: $message, hint: $hint);
 
-        $this->overwriteDnsRecord($projectConfig->id, $projectConfig->hostname);
-
-        if ($projectConfig->vite) {
-            $this->overwriteDnsRecord($projectConfig->id, $projectConfig->viteHostname());
+        foreach ($projectConfig->hostnames() as $hostname) {
+            $this->overwriteDnsRecord($projectConfig->id, $hostname);
         }
     }
 
     protected function recreateTunnel(TunnelConfig $tunnelConfig): void
     {
         $this->deleteTunnel($tunnelConfig->name());
-        $this->deleteDnsRecord($tunnelConfig->hostname());
-
-        if ($tunnelConfig->projectConfig->vite) {
-            $this->deleteDnsRecord($tunnelConfig->viteHostname());
-        }
+        $this->deleteDnsRecords($tunnelConfig);
 
         $this->deleteHerdLink($tunnelConfig->hostname());
         $this->deleteProject($tunnelConfig);
@@ -162,15 +155,12 @@ class CloudflaredInstall extends Command
 
     protected function createViteDnsRecord(ProjectConfig $projectConfig): void
     {
-        $viteHostname = "vite-{$projectConfig->hostname}";
+        $viteHostname = ProjectConfig::viteHostnameFor($projectConfig->hostname);
 
-        if (! confirm(
+        $this->confirmOrCancel(
             label: 'Are you sure you want to create a DNS record for Vite?',
             hint: "Creates DNS record: {$viteHostname}"
-        )) {
-            error(' ⚠ Cancelled.');
-            exit(0);
-        }
+        );
 
         try {
             $this->createDnsRecord($projectConfig->id, $viteHostname);
@@ -187,7 +177,7 @@ class CloudflaredInstall extends Command
         }
 
         $projectConfig->vite = true;
-        $projectConfig->save();
+        $this->saveProjectConfig($projectConfig);
     }
 
     protected function createDnsRecords(ProjectConfig $projectConfig): void
@@ -253,12 +243,19 @@ class CloudflaredInstall extends Command
 
         $subdomain = text(
             label: 'What subdomain do you want to use for this tunnel?',
-            placeholder: $this->herdSiteName(),
-            default: $this->herdSiteName(),
+            placeholder: Path::projectName(),
+            default: Path::projectName(),
             hint: "The tunnel will be available at {subdomain}.{$domain}",
             required: true,
         );
 
         return "{$subdomain}.{$domain}";
+    }
+
+    protected function confirmOrCancel(string $label, string $hint = ''): void
+    {
+        if (! confirm(label: $label, hint: $hint)) {
+            throw new CommandCancelledException;
+        }
     }
 }

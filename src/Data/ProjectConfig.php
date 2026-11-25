@@ -2,7 +2,9 @@
 
 namespace Cable8mm\Cloudflared\Data;
 
+use Cable8mm\Cloudflared\Exceptions\ProjectNotInstalledException;
 use Illuminate\Support\Facades\File;
+use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
 
 class ProjectConfig
@@ -17,27 +19,43 @@ class ProjectConfig
     public static function load(): self
     {
         if (! static::exists()) {
-            throw new \RuntimeException('No project configuration found. Run "php artisan cloudflared:install" first.');
+            throw new ProjectNotInstalledException;
         }
 
-        return new self(...Yaml::parseFile(static::path()));
+        $data = Yaml::parseFile(static::path());
+
+        $missingKeys = array_diff(['id', 'name', 'hostname'], array_keys(is_array($data) ? $data : []));
+
+        if (! empty($missingKeys)) {
+            throw new RuntimeException('.cloudflared.yaml is missing required keys: '.implode(', ', $missingKeys));
+        }
+
+        return new self(
+            id: (string) $data['id'],
+            name: (string) $data['name'],
+            hostname: (string) $data['hostname'],
+            vite: (bool) ($data['vite'] ?? false),
+        );
     }
 
     public function save(): void
     {
-        $vite = $this->vite ? 'true' : 'false';
+        File::put(static::path(), Yaml::dump([
+            'id' => $this->id,
+            'name' => $this->name,
+            'hostname' => $this->hostname,
+            'vite' => $this->vite,
+        ]));
+    }
 
-        File::put(static::path(), <<<YAML
-id: {$this->id}
-name: {$this->name}
-hostname: {$this->hostname}
-vite: {$vite}
-YAML);
+    public static function viteHostnameFor(string $hostname): string
+    {
+        return "vite-{$hostname}";
     }
 
     public function viteHostname(): ?string
     {
-        return $this->vite ? "vite-{$this->hostname}" : null;
+        return $this->vite ? static::viteHostnameFor($this->hostname) : null;
     }
 
     /**
