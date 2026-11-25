@@ -15,7 +15,7 @@ trait InteractsWithTunnel
 {
     protected function verifyCloudflaredFoundInPath(): void
     {
-        if (Process::run('cloudflared --version')->failed()) {
+        if (Process::run(['cloudflared', '--version'])->failed()) {
             $this->fail('cloudflared not found in PATH.');
         }
     }
@@ -23,7 +23,7 @@ trait InteractsWithTunnel
     protected function tunnelExists(string $name): bool
     {
         return spin(
-            callback: fn () => Process::run("cloudflared tunnel info {$name}")->successful(),
+            callback: fn () => Process::run(['cloudflared', 'tunnel', 'info', $name])->successful(),
             message: "Verifying tunnel {$name} exists"
         );
     }
@@ -33,7 +33,7 @@ trait InteractsWithTunnel
         $name = $this->generateUniqueTunnelName();
 
         $result = spin(
-            callback: fn () => Process::run("cloudflared tunnel create {$name}"),
+            callback: fn () => Process::run(['cloudflared', 'tunnel', 'create', $name]),
             message: "Creating tunnel: {$name}"
         );
 
@@ -51,7 +51,7 @@ trait InteractsWithTunnel
     protected function deleteTunnel(string $name): void
     {
         $result = spin(
-            callback: fn () => Process::run("cloudflared tunnel delete {$name}"),
+            callback: fn () => Process::run(['cloudflared', 'tunnel', 'delete', $name]),
             message: "Deleting tunnel: {$name}"
         );
 
@@ -69,7 +69,7 @@ trait InteractsWithTunnel
     protected function createDnsRecord(string $id, string $hostname): void
     {
         $result = spin(
-            callback: fn () => Process::run("cloudflared tunnel route dns {$id} {$hostname}"),
+            callback: fn () => Process::run(['cloudflared', 'tunnel', 'route', 'dns', $id, $hostname]),
             message: "Creating DNS record: {$hostname}"
         );
 
@@ -85,7 +85,7 @@ trait InteractsWithTunnel
     protected function overwriteDnsRecord(string $id, string $hostname): void
     {
         $result = spin(
-            callback: fn () => Process::run("cloudflared tunnel route dns --overwrite-dns {$id} {$hostname}"),
+            callback: fn () => Process::run(['cloudflared', 'tunnel', 'route', 'dns', '--overwrite-dns', $id, $hostname]),
             message: "Overwriting DNS record: {$hostname}"
         );
 
